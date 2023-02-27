@@ -8,18 +8,27 @@ output:
     toc_float: true
 ---
 
+This proposal works with data from the World Health Organization and United Nations. All of the research questions are related to demographics, more specifically the development of the survival rate within age groups. The [dataset from the WHO](https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31) which will be used for the main three research questions has survival data for 183 countries, separated out by sex (male, female, combined), 19 age groups and 5 waves. The dataset can be downloaded using the `{WHO}` package, but is read in as an .RDS because this is much faster and works more reliably.
+
+I will be looking at the following Research questions:
+
+1) Across countries, did the survival rate generally increase from 2000 to 2019 across countries?
+
+2) Which countries have the highest survival rate for the age group of 85+ years?
+
+3) Which countries show the most extreme survival rate differences between Women and Men?
+
+Furthermore, I came across this cool [graphic](https://upload.wikimedia.org/wikipedia/commons/f/f6/Global_Population-Pyramid-1950-to-2100.jpg) that I will be trying to reproduce. This graphic uses data from the UN which can be found [here](https://population.un.org/wpp/Download/Standard/Population/). However, since the files are too big (> 100 MB), they cannot be hosted on github. Instead, the data set necessary for this graphic was generated from the original files and saved as an RDS. It is much smaller in size and is hosted on github. 
+
 # Initializing, Data loading
 This code takes forever, so I executed it only once and saved the data as an RDS
 ```{r setup, include=FALSE}
 
-knitr::opts_chunk$set(cache = TRUE)
+knitr::opts_chunk$set(cache = TRUE, dev = "svg")
 #library(WHO)
 #y <- get_data("LIFE_0000000031")
-#saveRDS(y, "data/WHOData_downloaded_1_30_23.RDS")
-```
+#saveRDS(y, "data/WHO_survival_data.RDS")
 
-
-```{r}
 options(scipen = 999)
 library(tidyverse)
 library(forcats)
@@ -28,8 +37,8 @@ library(openxlsx)
 library(ggpubr)
 library(countrycode)
 
-data <- readRDS("data/WHOData_downloaded_1_30_23.RDS")
-countries <- read.csv("data/country_names.csv")
+data <- readRDS("data/WHO_survival_data.RDS")
+countries <- read.csv("data/WHO_country_conversion.csv")
 
 data <- data %>%
   mutate(agegroup = factor(agegroup),
@@ -49,12 +58,14 @@ data <- left_join(data, countries %>% select(DisplayString, ISO), by = c("countr
 #useless plot, plotting individual survival traces for all countries for 2019
 ggplot(data[data$year == 2019 & data$sex != "Both sexes",])+
   geom_line(aes(x = agegroup, y = prob, group = interaction(country, sex), color = sex), alpha = .2)+
+  labs(caption = "Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
   theme_classic()+
   theme(axis.text.x = element_text(angle = 45,
                                    hjust = 1))
 ```
 
-# Research Question 1: Did the survival rate increase over the past samples?
+# Research Question 1: Across countries, did the survival rate generally increase from 2000 to 2019 across countries?
+
 ## Attempt 1, very simple
 ```{r}
 #May be worth splitting by Region.
@@ -106,7 +117,7 @@ ggplot(RQ1, aes(x  = agegroup, y = M, group = year, color = year)) +
        x = "Age Group",
        y = "Percentage alive",
        color = "Sample Year",
-       caption = "Data from the WHO\nErrorbars represent confidence intervals.")+
+       caption = "Errorbars represent confidence intervals.\n Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
   scale_y_continuous(limits = c(0, 100), 
                      labels = function(y) paste0(y, " %"))+
   scale_color_viridis_c(option = "plasma", 
@@ -164,7 +175,7 @@ ggplot(RQ1_regions, aes(x  = agegroup, y = M, group = year, color = year)) +
        x = "Age Group",
        y = "Percentage alive",
        color = "Sample Year",
-       caption = "Data from the WHO\nErrorbars represent confidence intervals.")+
+       caption = "Errorbars represent confidence intervals.\n Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
   scale_y_continuous(limits = c(NA, 100), labels = function(y) paste0(y, " %"))+
   scale_color_viridis_c(option = "plasma", 
                         guide = guide_colourbar(direction = "horizontal", 
@@ -207,7 +218,7 @@ ggplot(RQ1_regions, aes(x  = agegroup, y = M, group = year, color = year)) +
 #####################
 ```
 
-# Research Question 2: Which countries have the highest survival rate for the age group 85 +?
+# Research Question 2: Which countries have the highest survival rate for the age group of 85+ years?
 
 ```{r}
 #####################
@@ -241,7 +252,7 @@ ggplot(RQ2, aes(x = long, y = lat, group = group, fill = M))+
                        labels = function(y) paste0(y, " %"))+
   labs(title = "The survival rate at 85 + years varies greatly by country.",
        fill = "Survival Rate at 85+ years",
-       caption = "Data from the 2019 Global Health Observatory study.")+
+       caption = "Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
   theme_classic()+
   theme(axis.title = element_blank(),
         axis.ticks = element_blank(),
@@ -253,7 +264,7 @@ ggplot(RQ2, aes(x = long, y = lat, group = group, fill = M))+
 
 ```
 
-# Research Question 3: Which countries have the highest survival rate difference for Women vs. Men?
+# Research Question 3: Which countries show the most extreme survival rate differences between Women and Men?
 ## As a map
 ```{r}
 #####################
@@ -296,7 +307,8 @@ ggplot(RQ3, aes(x = long, y = lat, group = group, fill = age_diff))+
   #                                              title.hjust = 0.5),
   #                      labels = function(y) paste0(y, " %"))+
   labs(title = "In some countries, women have a greater survival chance at 85 + years.",
-       fill = "Difference of survival \nPositive numbers indicate a higher portion of women surviving.")+
+       fill = "Difference of survival \nPositive numbers indicate a higher portion of women surviving.",
+       caption = "Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
   theme_classic()+
   theme(axis.title = element_blank(),
         axis.ticks = element_blank(),
@@ -331,10 +343,10 @@ ggplot(RQ3_bar)+
   geom_text(aes(y = -10, x = show_N-1, label = "Top 10 Countries\nin which women\nhave a higher survival rate"))+
   labs(title = "In most countries, women survive longer than men.",
        subtitle = "The most extreme 20 countries worldwide are shown.",
-       y = "Difference in survival rate between Women and Men")+
+       y = "Difference in survival rate between Women and Men",
+       caption = "Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
   coord_flip()+
-  theme_classic()+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme_classic()
 ```
 
 ### Version 2
@@ -342,17 +354,17 @@ ggplot(RQ3_bar)+
 RQ3_bar2 <- RQ3_bar %>%
   mutate(highlow = rep(c("low", "high"), each = show_N))
   
-(high <- ggplot(RQ3_bar2 %>% filter(highlow == "high"))+
+high <- ggplot(RQ3_bar2 %>% filter(highlow == "high"))+
   geom_bar(aes(x = country, y = age_diff, fill = age_diff), stat = "identity", show.legend = FALSE)+
   geom_hline(yintercept = 0)+
   scale_fill_viridis_c()+
   scale_y_continuous(limits = c(min(breaks), max(breaks)),
                      labels = function(y) paste0(y, " %"))+
-  labs(title = "Bottom 10 Countries\nin which women have a higher survival rate")+
+  labs(title = "Bottom 10 Countries\nin which women have a higher survival rate",
+       caption = "Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
   coord_flip()+
   theme_classic()+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.title.y = element_blank()))
+  theme(axis.title.y = element_blank())
 
 low <- ggplot(RQ3_bar2 %>% filter(highlow == "low"))+
   geom_bar(aes(x = country, y = age_diff, fill = age_diff), stat = "identity", show.legend = FALSE)+
@@ -377,12 +389,22 @@ ggarrange(low, high, nrow = 2, common.legend = TRUE)
 #BONUS#
 #######
 
-#This is for the replication of the figure found here: https://upload.wikimedia.org/wikipedia/commons/f/f6/Global_Population-Pyramid-1950-to-2100.jpg
+#This section reproduces the figure found here: https://upload.wikimedia.org/wikipedia/commons/f/f6/Global_Population-Pyramid-1950-to-2100.jpg
+# Data from https://population.un.org/wpp/Download/Standard/Population/
 
-# male_est   <- read.xlsx("data/UN_POPULATION_SINGLE_AGE_MALE.xlsx", sheet = 1, startRow = 17, colNames = TRUE)
-# male_pro   <- read.xlsx("data/UN_POPULATION_SINGLE_AGE_MALE.xlsx", sheet = 2, startRow = 17, colNames = TRUE)
-# female_est <- read.xlsx("data/UN_POPULATION_SINGLE_AGE_FEMALE.xlsx", sheet = 1, startRow = 17, colNames = TRUE)
-# female_pro <- read.xlsx("data/UN_POPULATION_SINGLE_AGE_FEMALE.xlsx", sheet = 2, startRow = 17, colNames = TRUE)
+#If you want to download the data within R, you need to uncomment and run the following code once:
+
+#Download data - these are fairly large (> 100 MB each and take a bit of time)
+# options(timeout = 500)
+# 
+# download.file(url = "https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/EXCEL_FILES/2_Population/WPP2022_POP_F01_3_POPULATION_SINGLE_AGE_FEMALE.xlsx", destfile = "data/UN_Female.xlsx", mode = "wb")
+# 
+# download.file(url = "https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/EXCEL_FILES/2_Population/WPP2022_POP_F01_2_POPULATION_SINGLE_AGE_MALE.xlsx", destfile = "data/UN_Male.xlsx", mode = "wb")
+# 
+# male_est   <- read.xlsx("data/UN_Male.xlsx", sheet = 1, startRow = 17, colNames = TRUE)
+# male_pro   <- read.xlsx("data/UN_Male.xlsx", sheet = 2, startRow = 17, colNames = TRUE)
+# female_est <- read.xlsx("data/UN_Female.xlsx", sheet = 1, startRow = 17, colNames = TRUE)
+# female_pro <- read.xlsx("data/UN_Female.xlsx", sheet = 2, startRow = 17, colNames = TRUE)
 # 
 # 
 # male_est <- male_est %>%
@@ -470,12 +492,13 @@ ggplot()+
   scale_linetype_discrete(labels = c("estimate" = "estimation", "pro" = "projection"))+
   labs(linetype = "",
        title = "Development of the Worldwide Age Distribution.",
-       caption = "Inspired by\n https://upload.wikimedia.org/wikipedia/commons/f/f6/Global_Population-Pyramid-1950-to-2100.jpg",
+       caption = "Inspired by\n https://upload.wikimedia.org/wikipedia/commons/f/f6/Global_Population-Pyramid-1950-to-2100.jpg\n Data from United Nations, https://population.un.org/wpp/Download/Standard/Population/",
        y = "Age")+
   theme_classic()+
   theme(legend.position = "bottom")
 
 
+#This is work in progress:
 # ggplot()+
 #   geom_smooth(data = bonus_data3, aes(x = value, y = age, color = "grey", group = interaction(year, sex)), se = FALSE, span = .5)+
 #   geom_ribbon(data = bonus_data3, aes(x = value, ymin = 0, ymax = predict(loess(age ~ value, span = .5)), group = interaction(year, sex), fill = as.numeric(as.character(year))),
@@ -532,3 +555,9 @@ ggplot()+
 #   
 
 ```
+
+
+```{r}
+sessionInfo()
+```
+
