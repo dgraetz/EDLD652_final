@@ -1,0 +1,3 @@
+Life data: https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31
+Bonus data: : https://population.un.org/wpp/Download/Standard/Population/
+Metadata counties: https://apps.who.int/gho/data/node.metadata.COUNTRY?lang=en
