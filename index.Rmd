@@ -496,7 +496,7 @@ helper_text <- bonus_data3 %>%
   filter(sex == "male") %>%
   group_by(year) %>%
   mutate(index = 1:n(),
-         adjust = recode(year, "1950" = "100",
+         adjust = recode(year, "1950" = "600",
                          "1960" = "400",
                          "1970" = "600",
                          "1980" = "800",
@@ -505,14 +505,14 @@ helper_text <- bonus_data3 %>%
                          "2050" = "1400",
                          "2075" = "1600",
                          "2100" = "1800") %>% as.numeric(),
-         adjust = adjust*20,
+         adjust = (adjust + 1400)*15,
          val = abs(value + 35000),
          val2 = abs(value + adjust),
          pos = which.min(val),
          pos2 = which.min(val2)) %>%
   slice(pos2[1])
 
-(bonus_plot <- ggplot()+
+bonus_plot <- ggplot()+
   geom_hline(yintercept = seq(10, 90, 10), color = "lightgrey", lwd = 0.8)+
   geom_hline(yintercept = seq(5, 95, 10), color = "lightgrey", lwd = 0.2)+
   geom_vline(xintercept = seq(-60, 60, by = 20)*1000, color = "lightgrey")+
@@ -539,7 +539,7 @@ helper_text <- bonus_data3 %>%
   theme(legend.position = "bottom",
         axis.ticks = element_blank(),
         axis.line = element_blank(), 
-        plot.subtitle = ggtext::element_markdown(size = 8)))
+        plot.subtitle = ggtext::element_markdown(size = 8))
 
 
 ```
