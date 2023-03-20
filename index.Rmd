@@ -1,0 +1,710 @@
+---
+title: "Final Project"
+author: "Dominik Graetz"
+output: 
+  flexdashboard::flex_dashboard:
+    vertical_layout: scroll
+    source_code: embed
+    theme: flatly
+---
+
+```{css, echo=FALSE}
+.fluid-column {
+  font-size: 5.9vw;
+}
+```
+
+
+```{r}
+#Setup
+
+knitr::opts_chunk$set(cache = FALSE, dev = "svg")
+#library(WHO)
+#y <- get_data("LIFE_0000000031")
+#saveRDS(y, "data/WHO_survival_data.RDS")
+
+options(scipen = 999)
+library(tidyverse)
+library(forcats)
+library(janitor)
+library(openxlsx)
+library(ggpubr)
+library(ggimage)
+library(countrycode)
+library(plotly)
+```
+
+```{r}
+data <- readRDS("data/WHO_survival_data.RDS")
+countries <- read.csv("data/WHO_country_conversion.csv")
+
+data <- data %>%
+  mutate(agegroup = factor(agegroup),
+         agegroup = factor(agegroup, levels = c(levels(agegroup)[1:2], levels(agegroup)[11], levels(agegroup)[3:10], levels(agegroup)[12:19])),
+         prob = (value/100000)*100) %>%
+  filter(!is.na(country),
+         !is.na(agegroup))
+
+data <- left_join(data, countries %>% select(DisplayString, ISO), by = c("country" = "DisplayString"))
+
+#The following code is to make the x axis lables more readable 
+ages <- data$agegroup %>% unique()
+ages_extr <- str_extract_all(ages, "[[:digit:]]+")
+
+age_m <- lapply(ages_extr, as.numeric) %>% 
+  lapply(mean) %>% 
+  unlist()
+
+names(age_m) <- ages
+
+data <- data %>%
+  mutate(age = recode(agegroup, !!! age_m),
+         age = as.factor(age),
+         agegroup = recode(age, "1" = "< 1",
+                      "85" = "> 85"))
+
+```
+
+
+```{r}
+# Exploratory Plot
+
+#useless plot, plotting individual survival traces for all countries for 2019
+RQ1_expl_plot <- ggplot(data[data$year == 2019 & data$sex != "Both sexes",])+
+  geom_line(aes(x = agegroup, y = prob, group = interaction(country, sex), color = sex), alpha = .2)+
+  labs(caption = "Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
+  theme_classic()
+```
+
+```{r}
+# Research Question 1: Across countries, did the survival rate generally increase from 2000 to 2019 across countries?
+
+## Attempt 1, very simple
+
+#May be worth splitting by Region.
+RQ1 <- data %>%
+  filter(sex == "Both sexes") %>%
+  group_by(agegroup, year) %>%
+  summarize(M = mean(prob),
+            SD = sd(prob),
+            N = n(),
+            SE = SD/sqrt(N),
+            CI = SE*qt(.025, N-1, lower.tail = FALSE))
+
+RQ1_test_plot <- ggplot(RQ1) +
+  geom_line(aes(x  = age, y = M, group = year, color = year))+
+  theme_classic()
+
+```
+
+
+```{r}
+## Errorbars!
+pos <- position_dodge(width = .6)
+RQ1_error_plot <- ggplot(RQ1, aes(x  = agegroup, y = M, group = year, color = year)) +
+  geom_line(position = pos, lwd = 1)+
+  scale_color_continuous(breaks = c(2000, 2005, 2010, 2015, 2019))+
+  geom_errorbar(aes(ymin = M - CI, ymax = M + CI), width = 0, position = pos, lwd = 1)+
+  theme_classic()
+
+```
+
+
+```{r}
+## That's a nice first version!
+##Thinking about removing the color bar and just leaving the year as text. 
+
+RQ1_text <- RQ1[RQ1$agegroup == "> 85",]
+RQ1_text$y <- RQ1_text$M - mean(RQ1_text$M)
+RQ1_text$y <- RQ1_text$y*1.5 + RQ1_text$M
+
+pos <- position_dodge(width = .6)
+RQ1_final_plot <- ggplot(RQ1, aes(x  = agegroup, y = M, group = year, color = year)) +
+  geom_line(position = pos, lwd = 1)+
+  geom_errorbar(aes(ymin = M - CI, ymax = M + CI), width = 0, position = pos, lwd = 1)+
+  geom_text(data = RQ1_text, aes(label = year, y = y), position = pos, hjust = -0.4, fontface = "bold")+
+  labs(title = "Younger generations live longer.",
+       subtitle = paste0("Data averaged across ", RQ1$N[1], " countries"),
+       x = "Age",
+       y = "Percentage alive",
+       color = "Sample Year",
+       caption = "Errorbars represent 95 % confidence intervals.\n Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
+  scale_y_continuous(limits = c(0, 100), 
+                     labels = function(y) paste0(y, " %"))+
+  scale_color_viridis_c(option = "plasma", 
+                        guide = guide_colourbar(direction = "horizontal", 
+                                                title.position = "top"), 
+                        end = .9,
+                        breaks = c(2000, 2005, 2010, 2015, 2019))+
+  expand_limits(x = c(0, 22))+
+  theme_classic()+
+  theme(legend.position = c(0.1, 0.2),
+        legend.key.width = unit(1, 'cm'),
+        legend.key.height = unit(0.4, 'cm'),
+        legend.justification = "left")
+
+```
+
+
+```{r}
+# By region
+#Probably worth it, there are some interesting differences.
+
+RQ1_text <- RQ1[RQ1$agegroup == "> 85",]
+RQ1_text$y <- RQ1_text$M - mean(RQ1_text$M)
+RQ1_text$y <- RQ1_text$y*1.8 + RQ1_text$M
+
+RQ1_regions <- data %>%
+  filter(sex == "Both sexes") %>%
+  group_by(agegroup, region, year) %>%
+  summarize(M = mean(prob),
+            SD = sd(prob),
+            N = n(),
+            SE = SD/sqrt(N),
+            CI = SE*qt(.025, N-1, lower.tail = FALSE))
+
+#get map data
+map <- map_data("world")
+map$ISO <- countrycode(map$region, "country.name", "iso3c")
+
+map <- left_join(map, countries %>% select(ISO, WHO_REGION))
+map <- map %>%
+  mutate(EM = ifelse(WHO_REGION == "Eastern Mediterranean", 1, 0) %>% factor(),
+         AF = ifelse(WHO_REGION == "Africa", 1, 0) %>% factor(),
+         AM = ifelse(WHO_REGION == "Americas", 1, 0) %>% factor(),
+         EU = ifelse(WHO_REGION == "Europe", 1, 0) %>% factor(),
+         WP = ifelse(WHO_REGION == "Western Pacific", 1, 0) %>% factor(),
+         SE = ifelse(WHO_REGION == "South-East Asia", 1, 0) %>% factor())
+
+EM <- ggplot(map, aes(x = long, y = lat, group = group, fill = EM))+
+  scale_fill_manual(values = c("1" = "blue", "0" = "grey"))+
+  geom_polygon(color = "black", show.legend = FALSE) +
+  theme_void()
+
+ggsave(EM, filename = "EM.svg", width = 7, height = 3.5)
+
+AF <- ggplot(map, aes(x = long, y = lat, group = group, fill = AF))+
+  scale_fill_manual(values = c("1" = "blue", "0" = "grey"))+
+  geom_polygon(color = "black", show.legend = FALSE) +
+  theme_void()
+
+ggsave(AF, filename = "AF.svg", width = 7, height = 3.5)
+
+AM <- ggplot(map, aes(x = long, y = lat, group = group, fill = AM))+
+  scale_fill_manual(values = c("1" = "blue", "0" = "grey"))+
+  geom_polygon(color = "black", show.legend = FALSE) +
+  theme_void()
+
+ggsave(AM, filename = "AM.svg", width = 7, height = 3.5)
+
+EU <- ggplot(map, aes(x = long, y = lat, group = group, fill = EU))+
+  scale_fill_manual(values = c("1" = "blue", "0" = "grey"))+
+  geom_polygon(color = "black", show.legend = FALSE) +
+  theme_void()
+
+ggsave(EU, filename = "EU.svg", width = 7, height = 3.5)
+
+WP <- ggplot(map, aes(x = long, y = lat, group = group, fill = WP))+
+  scale_fill_manual(values = c("1" = "blue", "0" = "grey"))+
+  geom_polygon(color = "black", show.legend = FALSE) +
+  theme_void()
+
+ggsave(WP, filename = "WP.svg", width = 7, height = 3.5)
+
+SE <- ggplot(map, aes(x = long, y = lat, group = group, fill = SE))+
+  scale_fill_manual(values = c("1" = "blue", "0" = "grey"))+
+  geom_polygon(color = "black", show.legend = FALSE) +
+  theme_void()
+
+ggsave(SE, filename = "SE.svg", width = 7, height = 3.5)
+
+images <- data.frame(region = c("Eastern Mediterranean", "Africa", "Americas", "Europe", "Western Pacific", "South-East Asia"),
+           image = c("EM.svg", "AF.svg", "AM.svg", "EU.svg", "WP.svg", "SE.svg"))
+
+RQ1_regions_text <- RQ1_regions[RQ1_regions$agegroup == "> 85",]
+RQ1_regions_text <- RQ1_regions_text %>%
+  group_by(region) %>%
+  mutate(y = seq(10, 40, length.out = 5))
+
+pos <- position_dodge(width = 1)
+RQ1_region_plot <- ggplot(RQ1_regions, aes(x  = agegroup, y = M, group = year, color = year)) +
+  geom_line(position = pos, lwd = 1)+
+  geom_image(data = images, aes(x = "< 1", y = 0, image = image), inherit.aes = FALSE, size = .8, position = position_nudge(x = 8, y = 20))+
+  geom_errorbar(aes(ymin = M - CI, ymax = M + CI), width = 0, position = pos)+
+  geom_text(data = RQ1_regions_text[RQ1_regions_text$region == "Africa",], 
+             aes(label = year, x = 1, y = y + 40),
+             hjust = 0,
+             fontface = "bold")+
+  geom_text(data = RQ1_regions_text %>% group_by(region) %>% slice(1), 
+             aes(label = sprintf("italic(N) == %d", N), x = 15, y = 95, group = region),
+             parse = TRUE)+
+  facet_wrap(~region, scales = "free_x" , ncol = 3)+
+  labs(title = "Recent generations live longer across Regions.",
+       x = "Age Group",
+       y = "Percentage alive",
+       color = "Sample Year",
+       caption = "Errorbars represent 95 % confidence intervals.\n Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
+  scale_y_continuous(limits = c(NA, 100), labels = function(y) paste0(y, " %"))+
+  scale_color_viridis_c(option = "plasma", 
+                        guide = guide_colourbar(direction = "horizontal", 
+                                                title.position = "top", 
+                                                title.hjust = 0.5), 
+                        end = .8)+
+  theme_classic()+
+  theme(legend.position = "none",
+        legend.key.width = unit(3, 'cm'),
+        legend.key.height = unit(0.7, 'cm'),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+```{r}
+# Research Question 2: Which countries have the highest survival rate for the age group of 85+ years?
+
+#Research Question 2#
+
+#data that would correspond to research question 2
+RQ2 <- data %>%
+  filter(sex == "Both sexes" & agegroup == "> 85" & year == 2019) %>%
+  group_by(country, ISO) %>%
+  summarize(M = mean(prob))
+
+minmax <- RQ2 %>%
+  ungroup() %>%
+  arrange(M) %>%
+  slice(1:5, (n() - 4) : n())
+
+minmax_countries <- minmax$country
+
+RQ2 <- left_join(map, RQ2)
+
+RQ2_plot <- ggplot(RQ2, aes(x = long, y = lat, group = group, fill = M))+
+  geom_polygon(color = "black")+
+  scale_fill_viridis_c(option = "plasma",
+                       guide = guide_colourbar(title.position = "top", 
+                                               title.hjust = 0.5),
+                       labels = function(y) paste0(y, " %"))+
+  labs(title = "The survival rate at 85 + years varies greatly by country.",
+       fill = "Survival Rate at 85+ years",
+       caption = "Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
+  theme_classic()+
+  theme(axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        axis.line = element_blank(),
+        legend.position = "bottom",
+        legend.key.width = unit(3, 'cm'),
+        legend.key.height = unit(0.7, 'cm'))
+
+RQ2_bardata <- RQ2 %>% 
+  group_by(country) %>% 
+  slice(1) %>%
+  ungroup() %>%
+  arrange(M) %>%
+  filter(!is.na(M)) %>%
+  mutate(country = factor(country),
+         country = fct_reorder(country, M, .desc = FALSE))
+
+RQ2_barplot <- ggplot(RQ2_bardata, aes(x = country, y = M, fill = M))+
+  geom_bar(stat = "identity", show.legend = FALSE)+
+  geom_text(aes(label = paste0(round(M, 1), " %")), position = position_nudge(y = 3))+
+  scale_fill_viridis_c(option = "plasma")+
+  scale_y_continuous(labels = function(y) paste0(y, " %"),
+                     limits = c(0, max(RQ2_bardata$M) + 10))+
+  labs(title = "Survival Rates at the age of 85 + by country",
+       x = "",
+       y = "",
+       caption = "Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
+  coord_flip()+
+  theme_classic()
+
+```
+
+```{r}
+# Research Question 3: Which countries show the most extreme survival rate differences between Women and Men?
+## As a map
+#####################
+#Research Question 3#
+#####################
+
+#data that would correspond to research question 3
+RQ3 <- data %>%
+  filter(sex != "Both sexes" & agegroup == "> 85" & year == 2019) %>%
+  group_by(country, ISO) %>%
+  summarize(age_diff = prob[sex == "Female"] - prob[sex == "Male"])
+
+minmax <- RQ3 %>%
+  ungroup() %>%
+  arrange(age_diff) %>%
+  slice(1:5, (n() - 4) : n())
+
+minmax_countries <- minmax$country
+
+RQ3 <- left_join(map, RQ3)
+
+breaks <- (c(min(RQ3$age_diff, na.rm = TRUE), max(RQ3$age_diff, na.rm = TRUE))) %>% round(2)
+steps <- seq(breaks[1], breaks[2], by = 1) %>% round() 
+steps <- steps[steps %% 5 == 0]
+steps <- steps[c(-1, -length(steps))]
+breaks <- c(breaks, steps) %>% sort()
+
+RQ3_map_plot <- ggplot(RQ3, aes(x = long, y = lat, group = group, fill = age_diff))+
+  geom_polygon(color = "black")+
+  scale_fill_gradient2(low = "blue", mid = "white", midpoint = 0, high = "red", 
+                       labels = function(y) paste0(y, " %"),
+                       guide = guide_colourbar(title.position = "top", 
+                                               title.hjust = 0.5,
+                                               ticks.colour = "black",
+                                               frame.colour = "black"),
+                       limits = c(min(breaks), max(breaks)),
+                       breaks = breaks)+
+  # scale_fill_viridis_c(option = "plasma",
+  #                      guide = guide_colourbar(title.position = "top", 
+  #                                              title.hjust = 0.5),
+  #                      labels = function(y) paste0(y, " %"))+
+  labs(title = "In some countries, women have a greater survival chance at 85 + years.",
+       fill = "Difference of survival \nPositive numbers indicate a higher portion of women surviving.",
+       caption = "Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
+  theme_classic()+
+  theme(axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        axis.line = element_blank(),
+        legend.position = "bottom",
+        legend.key.width = unit(2.5, 'cm'),
+        legend.key.height = unit(0.7, 'cm'))
+```
+
+```{r}
+## As a bar chart of the most extreme 10.
+### Version 1
+show_N <- 10
+RQ3_bar <- RQ3 %>% 
+  group_by(country) %>% 
+  slice(1) %>%
+  ungroup() %>%
+  mutate(country = factor(country),
+         country = fct_reorder(country, age_diff, .desc = TRUE)) %>%
+  filter(!is.na(age_diff)) %>%
+  arrange(age_diff) %>%
+  slice(1:show_N, (n() - (show_N-1)) : n())
+
+RQ3_barplot <- ggplot(RQ3_bar)+
+  geom_rect(data = data.frame(x = 0, y = 0), aes(xmin = -Inf, xmax = Inf, ymin = 0, ymax = Inf), fill = "red", alpha = .3, inherit.aes = FALSE)+
+  geom_rect(data = data.frame(x = 0, y = 0), aes(xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = 0), fill = "blue", alpha = .3, inherit.aes = FALSE)+
+  #geom_text(aes(x = factor("3"), y = -10, label = fontawesome('fa-male')), family='fontawesome-webfont', size = 80, inherit.aes = FALSE, alpha = .01)+
+  #geom_text(aes(x = 2, y = 1, label = fontawesome('fa-male')), family='fontawesome-webfont', size = 100, inherit.aes = FALSE)+
+  geom_bar(aes(x = country, y = age_diff, fill = age_diff), stat = "identity", show.legend = FALSE)+
+  scale_fill_viridis_c()+
+  geom_vline(xintercept = show_N + 0.5, linetype = 4)+
+  geom_hline(yintercept = 0, lwd = 1)+
+  scale_y_continuous(labels = function(y) paste0(y, " %"))+
+  geom_text(aes(y = 10, x = show_N+6, label = "Bottom 10 Countries"))+
+  geom_text(aes(y = -10, x = show_N-6, label = "Top 10 Countries"))+
+  labs(title = "In most countries, women survive longer than men.",
+       subtitle = "The most extreme 20 countries worldwide are shown.",
+       x = "",
+       y = "Difference in survival between Women and Men at > 85",
+       caption = "Data from the WHO, https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31")+
+  coord_flip()+
+  theme_classic()
+
+```
+
+```{r}
+# Bonus Figure: Demographic Development
+#######
+#BONUS#
+#######
+
+#This section reproduces the figure found here: https://upload.wikimedia.org/wikipedia/commons/f/f6/Global_Population-Pyramid-1950-to-2100.jpg
+# Data from https://population.un.org/wpp/Download/Standard/Population/
+
+#If you want to download the data within R, you need to uncomment and run the following code once:
+
+#Download data - these are fairly large (> 100 MB each and take a bit of time)
+# options(timeout = 500)
+# 
+# download.file(url = "https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/EXCEL_FILES/2_Population/WPP2022_POP_F01_3_POPULATION_SINGLE_AGE_FEMALE.xlsx", destfile = "data/UN_Female.xlsx", mode = "wb")
+# 
+# download.file(url = "https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/EXCEL_FILES/2_Population/WPP2022_POP_F01_2_POPULATION_SINGLE_AGE_MALE.xlsx", destfile = "data/UN_Male.xlsx", mode = "wb")
+# 
+# male_est   <- read.xlsx("data/UN_Male.xlsx", sheet = 1, startRow = 17, colNames = TRUE)
+# male_pro   <- read.xlsx("data/UN_Male.xlsx", sheet = 2, startRow = 17, colNames = TRUE)
+# female_est <- read.xlsx("data/UN_Female.xlsx", sheet = 1, startRow = 17, colNames = TRUE)
+# female_pro <- read.xlsx("data/UN_Female.xlsx", sheet = 2, startRow = 17, colNames = TRUE)
+# 
+# 
+# male_est <- male_est %>%
+#   clean_names() %>%
+#   filter(region_subregion_country_or_area == "WORLD") %>%
+#   select(-index, -variant, -notes, -location_code, -iso2_alpha_code, -iso3_alpha_code, -sdmx_code, -type, -parent_code) %>%
+#   mutate(sex = "male",
+#          variant = "estimate", .after = region_subregion_country_or_area)
+# 
+# male_pro <- male_pro %>%
+#   clean_names() %>%
+#   filter(region_subregion_country_or_area == "WORLD") %>%
+#   select(-index, -variant, -notes, -location_code, -iso2_alpha_code, -iso3_alpha_code, -sdmx_code, -type, -parent_code) %>%
+#   mutate(sex = "male",
+#          variant = "pro", .after = region_subregion_country_or_area)
+# 
+# female_est <- female_est %>%
+#   clean_names() %>%
+#   filter(region_subregion_country_or_area == "WORLD") %>%
+#   select(-index, -variant, -notes, -location_code, -iso2_alpha_code, -iso3_alpha_code, -sdmx_code, -type, -parent_code) %>%
+#   mutate(sex = "female",
+#          variant = "estimate", .after = region_subregion_country_or_area)
+# 
+# female_pro <- female_pro %>%
+#   clean_names() %>%
+#   filter(region_subregion_country_or_area == "WORLD") %>%
+#   select(-index, -variant, -notes, -location_code, -iso2_alpha_code, -iso3_alpha_code, -sdmx_code, -type, -parent_code) %>%
+#   mutate(sex = "female",
+#          variant = "pro", .after = region_subregion_country_or_area)
+# 
+# 
+# bonus_data <- bind_rows(male_est, male_pro, female_est, female_pro)
+# 
+# saveRDS(bonus_data, "data/bonus_data.RDS")
+
+bonus_data <- readRDS("data/bonus_data.RDS")
+
+bonus_data2 <- bonus_data %>%
+  pivot_longer(cols = starts_with("x"), names_to = "age") %>%
+  mutate(age = gsub("x", "", age),
+         age = as.numeric(as.character(age)),
+         value = as.numeric(value),
+         year = as.numeric(year))
+
+bonus_data2$value <- ifelse(bonus_data2$sex == "male", bonus_data2$value*-1, bonus_data2$value)
+
+years_highlighted <- seq(1950, 2100, by = 25)
+years_highlighted <- c(1950, 1960, 1970, 1980, 1990, 2018, 2050, 2075, 2100)
+
+bonus_data3 <- bonus_data2[bonus_data2$year %in% years_highlighted,]
+
+helper <- bonus_data3 %>%
+  group_by(region_subregion_country_or_area, sex, variant, year) %>%
+  summarize(value = 0, age = 0)
+
+helper2 <- bonus_data3 %>%
+  group_by(region_subregion_country_or_area, sex, variant, year) %>%
+  summarize(value = 0, age = 100)
+
+helper <- bind_rows(helper2, helper, bonus_data3)
+
+helper <- helper %>%
+  mutate(year = factor(year, levels = rev(years_highlighted)))
+
+helper_text <- bonus_data3 %>%
+  filter(sex == "male") %>%
+  group_by(year) %>%
+  mutate(index = 1:n(),
+         adjust = recode(year, "1950" = "100",
+                         "1960" = "200",
+                         "1970" = "300",
+                         "1980" = "400",
+                         "1990" = "500",
+                         "2018" = "600",
+                         "2050" = "700",
+                         "2075" = "800",
+                         "2100" = "900") %>% as.numeric(),
+         val = abs(value + 35000),
+         val2 = abs(value + adjust*100),
+         pos = which.min(val),
+         pos2 = which.min(val2)) %>%
+  slice(pos[1])
+
+bonus_plot <- ggplot()+
+  geom_hline(yintercept = seq(10, 90, 10), color = "lightgrey", lwd = 0.8)+
+  geom_hline(yintercept = seq(5, 95, 10), color = "lightgrey", lwd = 0.2)+
+  geom_vline(xintercept = seq(-60, 60, by = 20)*1000, color = "lightgrey")+
+  geom_polygon(data = helper, aes(x = value, y = age, fill = as.numeric(as.character(year)), group = interaction(year, sex)), show.legend = FALSE)+
+  geom_path(data = bonus_data3, aes(x = value, y = age, group = interaction(sex, year), linetype = variant), color = "black", lwd = .4)+
+  geom_path(data = bonus_data2, aes(x = value, y = age, group = interaction(sex, year), linetype = variant), color = "lightgrey", lwd = .6, alpha = .1)+
+  geom_text(data = helper_text, aes(x = -35000, y = age, label = year), angle = 25, color = "black", position = position_nudge(y = +2), size = 3.5)+
+  geom_text(aes(x = c(-15000, 15000), y = c(10, 10), label = c("Male", "Female")), size = 6)+
+  geom_vline(xintercept = 0)+
+  scale_x_continuous(position = "top", 
+                     labels = function(y) paste0(abs(y)/1000, " million"),
+                     breaks = seq(-80000, 80000, by = 20000))+
+  scale_y_continuous(breaks = seq(10, 90, 10), labels = function(y) paste0(y, " years"))+
+  scale_fill_viridis_c(begin = .2, option = "plasma")+
+  scale_linetype_discrete(labels = c("estimate" = "estimation", "pro" = "projection"))+
+  labs(linetype = "",
+       title = "The Demography of the World Population from 1950 to 2100",
+       subtitle = "Shown is the age distribution of the world population - by sex - from 1950 to 2018 and the *UN Population Division*'s projection until 2100.",
+       caption = "Inspired by\n https://upload.wikimedia.org/wikipedia/commons/f/f6/Global_Population-Pyramid-1950-to-2100.jpg\n Data from United Nations, https://population.un.org/wpp/Download/Standard/Population/",
+       x = "",
+       y = "Age")+
+  coord_cartesian(ylim = c(0, 94))+
+  theme_classic()+
+  theme(legend.position = "bottom",
+        axis.ticks = element_blank(),
+        axis.line = element_blank(), 
+        plot.subtitle = ggtext::element_markdown(size = 8))
+
+
+```
+
+Home
+==================
+
+Column{.tabset}
+------------------
+
+### Introduction.
+
+Welcome to my dashboard! I created this site as part of the EDLD 652 Data Visualization for Educational Data Science class at the University of Oregon in Winter 2023.
+
+I am working with data from the World Health Organization and United Nations. All of the main research questions are related to demographics, more specifically the development of the survival rate for different age groups. The [dataset from the WHO](https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31) which will be used for the main three research questions has survival data for 183 countries, separated out by sex (male, female, combined), 19 age groups and 5 waves. The dataset can be downloaded using the `{WHO}` package.
+
+I will be looking at the following Research questions:
+
+1) [Across countries, did the survival rate generally increase from 2000 to 2019 across countries?](#research-question-1)
+
+2) [Which countries have the highest survival rate for the age group of 85+ years?](#research-question-2)
+
+3) [Which countries show the most extreme survival rate differences between Women and Men?](#research-question-3)
+
+Furthermore, I came across this cool [graphic](https://upload.wikimedia.org/wikipedia/commons/f/f6/Global_Population-Pyramid-1950-to-2100.jpg) that I attempt to [reproduce](#bonus-figure). This graphic uses data from the UN which can be found [here](https://population.un.org/wpp/Download/Standard/Population/). However, since the files are too big (> 100 MB), they cannot be hosted on GitHub. Instead, the data set necessary for this graphic was generated from the original files and saved as an RDS. It is much smaller in size and can be hosted on GitHub.
+
+**A few notes:**
+
+**Definition of Survival Rate**: In this context, survival rate refers to the percentage of the population left alive, assuming a 100 % population at age 1. For instance, a survival rate of 75 % at age 40 would mean that 75 % of the population are still alive at age 40, and 25 % have passed. 
+
+**Why are the ages on the x axis so weird?**: The WHO uses age groups and does not provide survival data for each age. Some of the x-axes would look somewhat busy if the age groups were spelled out. Instead, a single number is displayed, referring to the mean of the age group. For age group "10 - 14", for instance, 12 would be displayed. 
+
+Thanks for reading!
+
+
+Research Question 1
+==================
+
+{.sidebar}
+------------------
+
+**Notes.**
+
+In this page, my goal is to display the general shape of the survival rate curve (using the data for both sexes) and how this function develops over time (there were 5 time points for which this data was estimated - 2000, 2005, 2010, 2015, 2019). The first graph shows the average curves across all 183 countries in the dataset. I also added 95 % confidence intervals to this figure. Overall, a consistent improvement of survival chances can be noticed. 
+
+Given cultural and infrastructure-related differences, I also decided to display the curves for each "WHO region" separately. Interestingly, there seems to be some variation in the shape of the curve and the increase rate of this curve over time by country. For instance, it looks like in Africa and South-East Asia, the survival rate has improved more dramatically over the last 20 years, relative to the Americas, Eastern Mediterranean, Europe, and the Western Pacific region. Additionally, given the errorbars, one can infer the variability of these curves across the countries within the regions. For instance, the variability in Western Pacific region and the Eastern Mediterranean regions appears to be much higher than in other regions (however, it is important to realize that confidence intervals take into account both, variability, and sample size). On another note, while it is difficult to compare single age groups across regions in this plot, it is interesting to compare the end points of these curves.
+
+
+
+Column {.tabset data-width=900}
+------------------
+
+### Final Chart
+
+```{r fig.width=10, fig.height=8}
+RQ1_final_plot
+```
+
+### Final Chart By Region
+
+```{r fig.height=8, fig.width=10}
+RQ1_region_plot
+```
+
+
+Column {.tabset data-width=300}
+------------------
+
+### Attempt 2
+
+```{r fig.width=15, fig.height=8}
+RQ1_error_plot
+```
+
+### Attempt 1
+
+```{r fig.width=15, fig.height=8}
+RQ1_expl_plot
+```
+
+
+
+Research Question 2
+==================
+
+{.sidebar}
+------------------
+
+**Notes.**
+
+Using the data for both sexes, I color-coded the percentage of people who are still alive at an age of 85 or older, estimated for the year 2019 in this map and bar chart. While the map gives a nice overview and makes it easy to detect regional patterns, the bar chart gives actual numbers, which makes comparisons between countries with similar countries a little easier. 
+
+
+Column {.tabset data-width=900}
+------------------
+
+### Map 
+
+```{r fig.height=7, fig.width=15}
+RQ2_plot
+```
+
+### Bar chart
+
+```{r fig.height=40, fig.width=15}
+RQ2_barplot
+```
+
+
+
+Research Question 3
+==================
+
+{.sidebar}
+------------------
+
+**Notes.**
+
+It is commonly known that women survive longer than men. However, the difference in survival between men and women seems to vary dramatically between countries. The values displayed here result from subtracting the survival rate of men from the survival rate of women. The data refers to survival at age 85 + years for the year 2019. Thus, positive numbers indicate than women survive longer than men, however, negative numbers indicate the men have a higher chance of surviving until 85. You may notice that the color legend for the map goes down to a value of `r min(RQ3[!is.na(RQ3$age_diff), ]$age_diff) %>% round(2)` %. This is due to just a few countries, as can be seen in the bar graph, displaying the most extreme 20 most extreme countries. Countries in which women face violence more often and significant challenges and restrictions when it comes to their rights and freedoms show substantially lower survival rates for women. On the other hand, it seems as though women have a particularly high chance of survival in historically left-leaning countries or countries that have been members of the soviet union.
+
+
+Column{.tabset}
+------------------
+
+### Map
+
+```{r fig.width=15, fig.height=8}
+RQ3_map_plot
+```
+
+### Bar Plot
+
+```{r fig.width=15 , fig.height=8}
+RQ3_barplot
+```
+
+
+Bonus Figure
+==================
+
+{.sidebar}
+------------------
+
+**Notes.**
+
+I came across a figure that shows the development of the human population since 1950, including projections until 2100 (see "Original Plot"). I found this figure aesthetically really nice and wanted to see if I can recreate it in R. I wanted to use a different color scheme, but otherwise, I think I am fairly close to the original. I think the lines in the original figure were smoothed somehow, so that is probably one of the major differences. 
+
+Column{.tabset}
+------------------
+
+### My version
+
+```{r fig.width=15, fig.height=8}
+bonus_plot
+```
+
+
+### Original Plot
+
+```{r fig.width=15, fig.height=8}
+knitr::include_graphics("data/original_fig.jpg")
+```
+
