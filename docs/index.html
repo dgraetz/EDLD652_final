@@ -2146,7 +2146,7 @@ output:
 ```{r}
 #Setup
 
-knitr::opts_chunk$set(cache = TRUE, dev = "svg")
+knitr::opts_chunk$set(cache = FALSE, dev = "svg")
 #library(WHO)
 #y &lt;- get_data("LIFE_0000000031")
 #saveRDS(y, "data/WHO_survival_data.RDS")
@@ -2630,7 +2630,7 @@ helper_text &lt;- bonus_data3 %&gt;%
   filter(sex == "male") %&gt;%
   group_by(year) %&gt;%
   mutate(index = 1:n(),
-         adjust = recode(year, "1950" = "600",
+         adjust = recode(year, "1950" = "200",
                          "1960" = "400",
                          "1970" = "600",
                          "1980" = "800",
@@ -2639,7 +2639,7 @@ helper_text &lt;- bonus_data3 %&gt;%
                          "2050" = "1400",
                          "2075" = "1600",
                          "2100" = "1800") %&gt;% as.numeric(),
-         adjust = (adjust + 1400)*15,
+         adjust = (adjust + 1600)*15,
          val = abs(value + 35000),
          val2 = abs(value + adjust),
          pos = which.min(val),
