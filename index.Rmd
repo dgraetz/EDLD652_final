@@ -638,7 +638,7 @@ Column {.tabset data-width=900}
 
 ### Map 
 
-```{r fig.height=7, fig.width=15}
+```{r fig.height=9, fig.width=15}
 RQ2_plot
 ```
 
@@ -666,7 +666,7 @@ Column{.tabset}
 
 ### Map
 
-```{r fig.width=15, fig.height=8}
+```{r fig.width=15, fig.height=9}
 RQ3_map_plot
 ```
 
