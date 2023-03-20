@@ -554,7 +554,7 @@ Column{.tabset}
 
 Welcome to my dashboard! I created this site as part of the EDLD 652 Data Visualization for Educational Data Science class at the University of Oregon in Winter 2023.
 
-I am working with data from the World Health Organization and United Nations. All of the main research questions are related to demographics, more specifically the development of the survival rate for different age groups. The [dataset from the WHO](https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31) which will be used for the main three research questions has survival data for 183 countries, separated out by sex (male, female, combined), 19 age groups and 5 waves. The dataset can be downloaded using the `{WHO}` package.
+Normally, I am working with data from [Cognitive Neuroscience experiments](https://www.researchgate.net/profile/Dominik-Graetz). But for this seminar, I decided to expand and use different data. Here, I am working with data from the World Health Organization and United Nations. All of the main research questions are related to demographics, more specifically, the development of the survival rate for different age groups. The [dataset from the WHO](https://www.who.int/data/gho/indicator-metadata-registry/imr-details/31) which will be used for the main three research questions has survival data for 183 countries, separated out by sex (male, female) or combined, 19 age groups and 5 waves. The dataset can be downloaded using the `{WHO}` package.
 
 I will be looking at the following Research questions:
 
@@ -564,7 +564,7 @@ I will be looking at the following Research questions:
 
 3) [Which countries show the most extreme survival rate differences between Women and Men?](#research-question-3)
 
-Furthermore, I came across this cool [graphic](https://upload.wikimedia.org/wikipedia/commons/f/f6/Global_Population-Pyramid-1950-to-2100.jpg) that I attempt to [reproduce](#bonus-figure). This graphic uses data from the UN which can be found [here](https://population.un.org/wpp/Download/Standard/Population/). However, since the files are too big (> 100 MB), they cannot be hosted on GitHub. Instead, the data set necessary for this graphic was generated from the original files and saved as an RDS. It is much smaller in size and can be hosted on GitHub.
+Furthermore, I came across this appealing [graphic](https://upload.wikimedia.org/wikipedia/commons/f/f6/Global_Population-Pyramid-1950-to-2100.jpg) that I attempt to [reproduce](#bonus-figure). This graphic uses data from the UN which can be found [here](https://population.un.org/wpp/Download/Standard/Population/). However, since the original files are too big (> 100 MB), they cannot be hosted on GitHub. Instead, the data set necessary for this graphic was converted to RDS. It is much smaller in size and can be hosted on GitHub.
 
 **A few notes:**
 
@@ -583,7 +583,7 @@ Research Question 1
 
 **Notes.**
 
-In this page, my goal is to display the general shape of the survival rate curve (using the data for both sexes) and how this function develops over time (there were 5 time points for which this data was estimated - 2000, 2005, 2010, 2015, 2019). The first graph shows the average curves across all 183 countries in the dataset. I also added 95 % confidence intervals to this figure. Overall, a consistent improvement of survival chances can be noticed. 
+On this page, my goal is to display the general shape of the survival rate curve (using the data for both sexes) and how this function develops over time (there were 5 time points for which this data was estimated - 2000, 2005, 2010, 2015, 2019). The first graph shows the average curves across all 183 countries in the dataset. I also added 95 % confidence intervals to this figure. Overall, a consistent improvement of survival chances can be noticed. 
 
 Given cultural and infrastructure-related differences, I also decided to display the curves for each "WHO region" separately. Interestingly, there seems to be some variation in the shape of the curve and the increase rate of this curve over time by country. For instance, it looks like in Africa and South-East Asia, the survival rate has improved more dramatically over the last 20 years, relative to the Americas, Eastern Mediterranean, Europe, and the Western Pacific region. Additionally, given the errorbars, one can infer the variability of these curves across the countries within the regions. For instance, the variability in Western Pacific region and the Eastern Mediterranean regions appears to be much higher than in other regions (however, it is important to realize that confidence intervals take into account both, variability, and sample size). On another note, while it is difficult to compare single age groups across regions in this plot, it is interesting to compare the end points of these curves.
 
@@ -630,7 +630,7 @@ Research Question 2
 
 **Notes.**
 
-Using the data for both sexes, I color-coded the percentage of people who are still alive at an age of 85 or older, estimated for the year 2019 in this map and bar chart. While the map gives a nice overview and makes it easy to detect regional patterns, the bar chart gives actual numbers, which makes comparisons between countries with similar countries a little easier. 
+Using the data for both sexes, I color-coded the percentage of people who are still alive at an age of 85 or older, estimated for the year 2019 in this map and bar chart. While the map gives a nice overview and makes it easy to detect regional patterns, the bar chart gives actual numbers, which makes comparisons between countries with similar colors a little easier. 
 
 
 Column {.tabset data-width=900}
@@ -658,7 +658,7 @@ Research Question 3
 
 **Notes.**
 
-It is commonly known that women survive longer than men. However, the difference in survival between men and women seems to vary dramatically between countries. The values displayed here result from subtracting the survival rate of men from the survival rate of women. The data refers to survival at age 85 + years for the year 2019. Thus, positive numbers indicate than women survive longer than men, however, negative numbers indicate the men have a higher chance of surviving until 85. You may notice that the color legend for the map goes down to a value of `r min(RQ3[!is.na(RQ3$age_diff), ]$age_diff) %>% round(2)` %. This is due to just a few countries, as can be seen in the bar graph, displaying the most extreme 20 most extreme countries. Countries in which women face violence more often and significant challenges and restrictions when it comes to their rights and freedoms show substantially lower survival rates for women. On the other hand, it seems as though women have a particularly high chance of survival in historically left-leaning countries or countries that have been members of the soviet union.
+It is commonly known that women survive longer than men. However, the difference in survival between men and women seems to vary dramatically between countries. The values displayed here result from subtracting the survival rate of men from the survival rate of women. The data refers to survival at age 85 + for the year 2019. Thus, positive numbers indicate than women survive longer than men. Negative numbers indicate that men have a higher chance of surviving until 85. You may notice that the color legend for the map goes down to a value of `r min(RQ3[!is.na(RQ3$age_diff), ]$age_diff) %>% round(2)` %. This is due to just a few countries, as can be seen in the bar graph, displaying the most extreme 20 most extreme countries. Countries in which women face violence more often and significant challenges and restrictions when it comes to their rights and freedoms show substantially lower survival rates for women. On the other hand, it seems as though women have a particularly high chance of survival in historically left-leaning countries or countries that have been members of the soviet union.
 
 
 Column{.tabset}
