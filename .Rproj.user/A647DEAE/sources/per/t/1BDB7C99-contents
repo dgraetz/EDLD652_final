@@ -503,28 +503,29 @@ helper_text <- bonus_data3 %>%
   group_by(year) %>%
   mutate(index = 1:n(),
          adjust = recode(year, "1950" = "100",
-                         "1960" = "200",
-                         "1970" = "300",
-                         "1980" = "400",
-                         "1990" = "500",
-                         "2018" = "600",
-                         "2050" = "700",
-                         "2075" = "800",
-                         "2100" = "900") %>% as.numeric(),
+                         "1960" = "400",
+                         "1970" = "600",
+                         "1980" = "800",
+                         "1990" = "1000",
+                         "2018" = "1200",
+                         "2050" = "1400",
+                         "2075" = "1600",
+                         "2100" = "1800") %>% as.numeric(),
+         adjust = adjust*20,
          val = abs(value + 35000),
-         val2 = abs(value + adjust*100),
+         val2 = abs(value + adjust),
          pos = which.min(val),
          pos2 = which.min(val2)) %>%
-  slice(pos[1])
+  slice(pos2[1])
 
-bonus_plot <- ggplot()+
+(bonus_plot <- ggplot()+
   geom_hline(yintercept = seq(10, 90, 10), color = "lightgrey", lwd = 0.8)+
   geom_hline(yintercept = seq(5, 95, 10), color = "lightgrey", lwd = 0.2)+
   geom_vline(xintercept = seq(-60, 60, by = 20)*1000, color = "lightgrey")+
   geom_polygon(data = helper, aes(x = value, y = age, fill = as.numeric(as.character(year)), group = interaction(year, sex)), show.legend = FALSE)+
   geom_path(data = bonus_data3, aes(x = value, y = age, group = interaction(sex, year), linetype = variant), color = "black", lwd = .4)+
   geom_path(data = bonus_data2, aes(x = value, y = age, group = interaction(sex, year), linetype = variant), color = "lightgrey", lwd = .6, alpha = .1)+
-  geom_text(data = helper_text, aes(x = -35000, y = age, label = year), angle = 25, color = "black", position = position_nudge(y = +2), size = 3.5)+
+  geom_text(data = helper_text, aes(x = value, y = age, label = year), angle = 25, color = "black", position = position_nudge(y = +2), size = 3.5)+
   geom_text(aes(x = c(-15000, 15000), y = c(10, 10), label = c("Male", "Female")), size = 6)+
   geom_vline(xintercept = 0)+
   scale_x_continuous(position = "top", 
@@ -544,7 +545,7 @@ bonus_plot <- ggplot()+
   theme(legend.position = "bottom",
         axis.ticks = element_blank(),
         axis.line = element_blank(), 
-        plot.subtitle = ggtext::element_markdown(size = 8))
+        plot.subtitle = ggtext::element_markdown(size = 8)))
 
 
 ```
@@ -647,7 +648,7 @@ Column {.tabset data-width=900}
 RQ2_plot
 ```
 
-### Bar chart
+### Bar Plot
 
 ```{r fig.height=40, fig.width=15}
 RQ2_barplot

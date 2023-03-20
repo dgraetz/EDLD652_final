@@ -142,6 +142,7 @@ window.FlexDashboardComponents = [];
 </style>
 
 
+<link rel="stylesheet" href="style.css" type="text/css" />
 
 </head>
 
@@ -1868,11 +1869,6 @@ window.FlexDashboardComponents.push({
 <div class="knitr-options" data-fig-width="576" data-fig-height="460">
 
 </div>
-<style type="text/css">
-.fluid-column {
-  font-size: 5.9vw;
-}
-</style>
 <div class="knitr-options" data-fig-width="576" data-fig-height="460">
 
 </div>
@@ -1903,9 +1899,7 @@ window.FlexDashboardComponents.push({
 <div class="knitr-options" data-fig-width="576" data-fig-height="460">
 
 </div>
-<div class="knitr-options" data-fig-width="576" data-fig-height="460">
-
-</div>
+<p><img src="index_files/figure-html/unnamed-chunk-11-1.svg" width="576" /></p>
 <div id="home" class="section level1">
 <h1>Home</h1>
 <div id="column" class="section level2 tabset">
@@ -1992,14 +1986,14 @@ compare the end points of these curves.</p>
 <div class="knitr-options" data-fig-width="960" data-fig-height="768">
 
 </div>
-<p><img src="index_files/figure-html/unnamed-chunk-13-1.svg" width="960" /></p>
+<p><img src="index_files/figure-html/unnamed-chunk-12-1.svg" width="960" /></p>
 </div>
 <div id="final-chart-by-region" class="section level3">
 <h3>Final Chart By Region</h3>
 <div class="knitr-options" data-fig-width="960" data-fig-height="768">
 
 </div>
-<p><img src="index_files/figure-html/unnamed-chunk-14-1.svg" width="960" /></p>
+<p><img src="index_files/figure-html/unnamed-chunk-13-1.svg" width="960" /></p>
 </div>
 </div>
 <div id="column-2" class="section level2 tabset" data-width="300">
@@ -2009,14 +2003,14 @@ compare the end points of these curves.</p>
 <div class="knitr-options" data-fig-width="1440" data-fig-height="768">
 
 </div>
-<p><img src="index_files/figure-html/unnamed-chunk-15-1.svg" width="1440" /></p>
+<p><img src="index_files/figure-html/unnamed-chunk-14-1.svg" width="1440" /></p>
 </div>
 <div id="attempt-1" class="section level3">
 <h3>Attempt 1</h3>
 <div class="knitr-options" data-fig-width="1440" data-fig-height="768">
 
 </div>
-<p><img src="index_files/figure-html/unnamed-chunk-16-1.svg" width="1440" /></p>
+<p><img src="index_files/figure-html/unnamed-chunk-15-1.svg" width="1440" /></p>
 </div>
 </div>
 </div>
@@ -2039,14 +2033,14 @@ countries a little easier.</p>
 <div class="knitr-options" data-fig-width="1440" data-fig-height="672">
 
 </div>
-<p><img src="index_files/figure-html/unnamed-chunk-17-1.svg" width="1440" /></p>
+<p><img src="index_files/figure-html/unnamed-chunk-16-1.svg" width="1440" /></p>
 </div>
-<div id="bar-chart" class="section level3">
-<h3>Bar chart</h3>
+<div id="bar-plot" class="section level3">
+<h3>Bar Plot</h3>
 <div class="knitr-options" data-fig-width="1440" data-fig-height="3840">
 
 </div>
-<p><img src="index_files/figure-html/unnamed-chunk-18-1.svg" width="1440" /></p>
+<p><img src="index_files/figure-html/unnamed-chunk-17-1.svg" width="1440" /></p>
 </div>
 </div>
 </div>
@@ -2079,14 +2073,14 @@ of the soviet union.</p>
 <div class="knitr-options" data-fig-width="1440" data-fig-height="768">
 
 </div>
-<p><img src="index_files/figure-html/unnamed-chunk-19-1.svg" width="1440" /></p>
+<p><img src="index_files/figure-html/unnamed-chunk-18-1.svg" width="1440" /></p>
 </div>
-<div id="bar-plot" class="section level3">
+<div id="bar-plot-1" class="section level3">
 <h3>Bar Plot</h3>
 <div class="knitr-options" data-fig-width="1440" data-fig-height="768">
 
 </div>
-<p><img src="index_files/figure-html/unnamed-chunk-20-1.svg" width="1440" /></p>
+<p><img src="index_files/figure-html/unnamed-chunk-19-1.svg" width="1440" /></p>
 </div>
 </div>
 </div>
@@ -2110,7 +2104,7 @@ the major differences.</p>
 <div class="knitr-options" data-fig-width="1440" data-fig-height="768">
 
 </div>
-<p><img src="index_files/figure-html/unnamed-chunk-21-1.svg" width="1440" /></p>
+<p><img src="index_files/figure-html/unnamed-chunk-20-1.svg" width="1440" /></p>
 </div>
 <div id="original-plot" class="section level3">
 <h3>Original Plot</h3>
@@ -2147,19 +2141,13 @@ output:
     vertical_layout: scroll
     source_code: embed
     theme: flatly
+    css: "style.css"
 ---
-
-```{css, echo=FALSE}
-.fluid-column {
-  font-size: 5.9vw;
-}
-```
-
 
 ```{r}
 #Setup
 
-knitr::opts_chunk$set(cache = FALSE, dev = "svg")
+knitr::opts_chunk$set(cache = TRUE, dev = "svg")
 #library(WHO)
 #y &lt;- get_data("LIFE_0000000031")
 #saveRDS(y, "data/WHO_survival_data.RDS")
@@ -2644,28 +2632,29 @@ helper_text &lt;- bonus_data3 %&gt;%
   group_by(year) %&gt;%
   mutate(index = 1:n(),
          adjust = recode(year, "1950" = "100",
-                         "1960" = "200",
-                         "1970" = "300",
-                         "1980" = "400",
-                         "1990" = "500",
-                         "2018" = "600",
-                         "2050" = "700",
-                         "2075" = "800",
-                         "2100" = "900") %&gt;% as.numeric(),
+                         "1960" = "400",
+                         "1970" = "600",
+                         "1980" = "800",
+                         "1990" = "1000",
+                         "2018" = "1200",
+                         "2050" = "1400",
+                         "2075" = "1600",
+                         "2100" = "1800") %&gt;% as.numeric(),
+         adjust = adjust*20,
          val = abs(value + 35000),
-         val2 = abs(value + adjust*100),
+         val2 = abs(value + adjust),
          pos = which.min(val),
          pos2 = which.min(val2)) %&gt;%
-  slice(pos[1])
+  slice(pos2[1])
 
-bonus_plot &lt;- ggplot()+
+(bonus_plot &lt;- ggplot()+
   geom_hline(yintercept = seq(10, 90, 10), color = "lightgrey", lwd = 0.8)+
   geom_hline(yintercept = seq(5, 95, 10), color = "lightgrey", lwd = 0.2)+
   geom_vline(xintercept = seq(-60, 60, by = 20)*1000, color = "lightgrey")+
   geom_polygon(data = helper, aes(x = value, y = age, fill = as.numeric(as.character(year)), group = interaction(year, sex)), show.legend = FALSE)+
   geom_path(data = bonus_data3, aes(x = value, y = age, group = interaction(sex, year), linetype = variant), color = "black", lwd = .4)+
   geom_path(data = bonus_data2, aes(x = value, y = age, group = interaction(sex, year), linetype = variant), color = "lightgrey", lwd = .6, alpha = .1)+
-  geom_text(data = helper_text, aes(x = -35000, y = age, label = year), angle = 25, color = "black", position = position_nudge(y = +2), size = 3.5)+
+  geom_text(data = helper_text, aes(x = value, y = age, label = year), angle = 25, color = "black", position = position_nudge(y = +2), size = 3.5)+
   geom_text(aes(x = c(-15000, 15000), y = c(10, 10), label = c("Male", "Female")), size = 6)+
   geom_vline(xintercept = 0)+
   scale_x_continuous(position = "top", 
@@ -2685,7 +2674,7 @@ bonus_plot &lt;- ggplot()+
   theme(legend.position = "bottom",
         axis.ticks = element_blank(),
         axis.line = element_blank(), 
-        plot.subtitle = ggtext::element_markdown(size = 8))
+        plot.subtitle = ggtext::element_markdown(size = 8)))
 
 
 ```
@@ -2788,7 +2777,7 @@ Column {.tabset data-width=900}
 RQ2_plot
 ```
 
-### Bar chart
+### Bar Plot
 
 ```{r fig.height=40, fig.width=15}
 RQ2_barplot

@@ -3,7 +3,7 @@
     "path": "C:/Users/domin/Desktop/EDLD652_final/index.Rmd",
     "project_path": "index.Rmd",
     "type": "r_markdown",
-    "hash": "2685361228",
+    "hash": "3074439074",
     "contents": "",
     "dirty": false,
     "created": 1679328079242.0,
@@ -11,14 +11,16 @@
     "relative_order": 1,
     "properties": {
         "source_window_id": "",
-        "Source": "Source"
+        "Source": "Source",
+        "cursorPosition": "504,24",
+        "scrollLine": "488"
     },
     "folds": "",
-    "lastKnownWriteTime": 1679290808,
+    "lastKnownWriteTime": 1679330762,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1679290808,
+    "last_content_update": 1679330762787,
     "read_only": false,
     "read_only_alternatives": []
 }
